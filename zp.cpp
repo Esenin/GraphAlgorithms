@@ -1,6 +1,6 @@
 //! @file
 //! @author Ivan Senin
-//! @brief Problem ZU
+//! @brief Problem ZP. /. hungarian_algo
 //!
 
 #include <algorithm>
@@ -71,8 +71,8 @@ constexpr uint64 uInf64 = numeric_limits<uint64>::max();
 void ioInit()
 {
 #ifndef HOMERUN
-  const char *inName = "cubes.in";
-  const char *outName = "cubes.out";
+  const char *inName = "assignment.in";
+  const char *outName = "assignment.out";
 #else
   const char *inName = "input";
   const char *outName = "output";
@@ -115,32 +115,79 @@ size_t startWith(size_t size)
 /**************************************************************************************************
  *                             Solution goes here
  * ***********************************************************************************************/
+int const nMax = 300 + 1;
 
-int const nMax = 100000 + 1;
-int n, m;
+typedef array<int, nMax> cline;
 
-array<int, 2 * nMax> s;
-array<int64, 2 * nMax> zFun {};
-set<int64> cubesNum;
+array<cline, nMax> cost;
+array<int, nMax> minForCols, rLoad, cLoad, pairMatches, prevCol;
+array<bool, nMax> used;
+int n;
 
-void calcZFun()
+//! @attention 1-indexed matrix -- cost
+void hungarian_algo()
 {
-  int left = 0;
-  int right = 0;
-  for (int i = 1; i < n; i++)
-    if (zFun[i - left] + i <= right)
-      zFun[i] = zFun[i - left];
-    else
-      {
-        left = i;
-        if (i > right)
-          right = i;
-        for (zFun[i] = right - i; right < n; ++right, ++zFun[i])
-          if (s[right] != s[zFun[i]])
-            break;
-        --right;
-      }
+  for (int mRow = 1; mRow <= n; mRow++) // include next matrix row
+    {
+      pairMatches[0] = mRow;
+      int markedCol = 0;
+      fill(minForCols.begin(), minForCols.end(), Inf);
+      fill(used.begin(), used.end(), false);
+      do
+        {
+          used[markedCol] = true;
+          int markedRow = pairMatches[markedCol];
+          int delta = Inf;
+          int colWithMin = 0;
+
+          for (int j = 1; j <= n; j++) // update minimums, delta
+            {
+              if (used[j])
+                continue;
+
+              int cur = cost[markedRow][j] - rLoad[markedRow] - cLoad[j];
+              if (cur < minForCols[j])
+                {
+                  minForCols[j] = cur;
+                  prevCol[j] = markedCol;
+                }
+              if (minForCols[j] < delta)
+                {
+                  delta = minForCols[j];
+                  colWithMin = j;
+                }
+
+            }
+//          DEBUG("d = %d", delta);
+
+          if (delta != 0)
+            {
+              for (int j = 0; j <= n; j++) // recalc charges
+                if (used[j])
+                  {
+                    rLoad[pairMatches[j]] += delta;
+                    cLoad[j] -= delta;
+                  }
+                else
+                  minForCols[j] -= delta;
+            }
+
+//          DEBUG("min col = %d", colWithMin);
+          markedCol = colWithMin;
+        } while (pairMatches[markedCol] != 0); // free col was found
+
+      do
+        {
+          int p = prevCol[markedCol];
+          pairMatches[markedCol] = pairMatches[p];
+          markedCol = p;
+        }
+      while (markedCol != 0);
+    }
 }
+
+
+
 int main()
 {
 #ifdef HOMERUN
@@ -148,27 +195,20 @@ int main()
 #endif
   ioInit();
 
-  scanf("%d %d", &n, &m);
+  scanf("%d", &n);
+  for (int i = 1; i <= n; i++)
+    for(int j = 1; j <= n; j++)
+      {
+        int co;
+        scanf("%d", &co);
+        cost[i][j] = co;
+      }
 
-  for (int i = 0; i < n; i++)
-    {
-      scanf("%d", &s[i]);
-      s[n + n - i - 1] = s[i];
-    }
-  int n0 = n;
-  n *= 2;
-  s[n++] = m + 1;
+  hungarian_algo();
 
-  calcZFun();
-
-  for (int i = 0; i <= n0 / 2; i++)
-    if (zFun[2 * n0 - i * 2] >= i)
-      cubesNum.insert(n0 - i);
-  cubesNum.insert(n0);
-
-  for (const int64 &x : cubesNum)
-    printf(LLD " ", x);
-  printf("\n");
+  printf("%d\n", -cLoad[0]);
+  for (int i = 1; i <= n; i++)
+    printf("%d %d\n", pairMatches[i], i);
 
 
   ioClose();

@@ -1,6 +1,6 @@
 //! @file
 //! @author Ivan Senin
-//! @brief Problem ZS. Substring comparation, suffix array in O(N * log N )
+//! @brief Problem ZZB. suffix array in O(N * log N )
 //!
 
 #include <algorithm>
